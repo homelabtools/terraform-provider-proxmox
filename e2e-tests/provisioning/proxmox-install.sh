@@ -14,7 +14,7 @@ main() {
     echo "deb $PROXMOX_MIRROR/ceph-nautilus buster main" | tee /etc/apt/sources.list.d/ceph.list
     apt-get -y update
     apt-get -y install proxmox-ve postfix open-iscsi
-    reboot
+    #reboot
 }
 
 main
