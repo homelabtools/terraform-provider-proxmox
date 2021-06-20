@@ -73,13 +73,16 @@ example-plan:
 fmt:
 	gofmt -s -w $(GOFMT_FILES)
 
-init:
+init:"
 	go get ./...
 
 targets: $(TARGETS)
 
 test:
 	go test -v ./...
+
+e2e-test:
+	@cd e2e-tests && make test
 
 $(TARGETS):
 	GOOS=$@ GOARCH=amd64 CGO_ENABLED=0 go build \
