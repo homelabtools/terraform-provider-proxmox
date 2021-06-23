@@ -7,6 +7,7 @@ FQDN="${FQDN:-$HOSTNAME.internal}"
 IFACE="${IFACE:-eth0}"
 
 main() {
+    # Proxmox expects the hostname/FQDN to map to the IP that it's listening on.
     ip="$(hostname -I)"
     tee /etc/hosts << HERE
 127.0.0.1 localhost.internal localhost
