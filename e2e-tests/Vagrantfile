@@ -3,11 +3,10 @@ Vagrant.configure("2") do |config|
   config.vm.box_version = "~> 10.0"
 
   config.vm.provider "virtualbox" do |v|
-    v.memory = 2048
+    v.memory = 2048  # Required for Proxmox to run
     v.cpus = 2
   end
 
-  #config.vm.network   "forwarded_port", guest: 8006, host: 8016
-  config.vm.network   "public_network"
+  config.vm.network "forwarded_port", guest: 8006, host: 8006
   config.vm.provision "shell", path: "provisioning/proxmox-install.sh"
 end
