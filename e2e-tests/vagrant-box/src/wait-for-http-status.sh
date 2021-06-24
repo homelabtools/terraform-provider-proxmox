@@ -9,7 +9,7 @@ for i in $(seq 1 $MAX); do
     echo "Waiting for '$URL' to return status '$STATUS', attempt #$i..."
     status="$(curl -kLso /dev/null -w '%{http_code}' "$URL")"
     if [ "$status" -eq "$STATUS" ]; then
-        echo "SUCCESS: URL '$URL' returned status '$STATUS' after trying $i time(s) and $(( DELAY * i )) seconds"
+        echo "SUCCESS: URL '$URL' returned status '$STATUS' after trying $i times for $(( DELAY * i )) seconds"
         exit 0
     fi
     sleep $DELAY
