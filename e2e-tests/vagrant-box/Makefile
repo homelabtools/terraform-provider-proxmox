@@ -5,6 +5,8 @@ BOX_SRC          := Vagrantfile $(shell find src/)
 export HOST_PORT ?= 51823
 PROXMOX_URL      := https://127.0.0.1:$(HOST_PORT)
 
+TIME := /bin/time -f "Time elapsed %E from command: %C"
+
 default: box
 
 box: $(BOX_PATH)
@@ -12,14 +14,14 @@ box: $(BOX_PATH)
 $(BOX_PATH): $(BOX_SRC)
 	mkdir -p $(dir $(BOX_PATH))
 	vagrant destroy -f || true
-	time vagrant up --provider=$(PROVIDER)
-	time vagrant package --output $(BOX_PATH)
-	time vagrant box add $(BOX_PATH) --name $(BOX_NAME) --force
+	$(TIME) vagrant up --provider=$(PROVIDER)
+	$(TIME) vagrant package --output $(BOX_PATH)
+	$(TIME) vagrant box add $(BOX_PATH) --name $(BOX_NAME) --force
 	# Clean up VM
-	time vagrant destroy -f
+	$(TIME) vagrant destroy -f
 
 check:
-	time shellcheck --severity=style *.sh
+	shellcheck --severity=style *.sh
 
 clean:
 	vagrant box remove $(BOX_NAME) --force --all || true

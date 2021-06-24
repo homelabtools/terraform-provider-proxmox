@@ -1,21 +1,24 @@
 PROVIDER ?= virtualbox
 BOX_DIR  := vagrant-box
 
+TIME := /bin/time -f "Time elapsed %E from command: %C"
+
 default: test
 
 vagrant-box:
-	cd $(BOX_DIR) && time make
+	cd $(BOX_DIR) && $(TIME) make
 
 up: vagrant-box
-	time vagrant up --provider=$(PROVIDER)
+	$(TIME) vagrant up --provider=$(PROVIDER)
 
 down:
-	time vagrant down
+	$(TIME) vagrant down
 
 destroy:
-	time vagrant destroy -f
+	$(TIME) vagrant destroy -f
 
 test: up
+	go test -v .
 
 shell: up
 	vagrant ssh
