@@ -1,19 +1,18 @@
-# ATTENTION: For any new files that get added to this box, be sure to add them
-# to the BOX_SRC variable in the Makefile. Doing so ensures that make rebuilds
-# the box any time those files change.
 Vagrant.configure("2") do |config|
-  vbox_version = `VBoxManage --version | awk -F'r' '{print $1}'`
   config.vm.box         = "debian/buster64"
   config.vm.box_version = "~> 10.0"
 
   config.vm.provider "virtualbox" do |v|
-    v.memory = 4096  # Required for Proxmox to run
+    v.memory = 4096  # Required for Proxmox to run properly
     v.cpus = 2
   end
 
+  vbox_version = `VBoxManage --version | awk -F'r' '{print $1}'`
   host_port = ENV["HOST_PORT"] || 8006
+
   config.vm.network "forwarded_port", guest: 8006, host: host_port
-  config.vm.provision "shell", path: "install-proxmox.sh"
+  config.vm.provision "shell", path: "src/install-proxmox.sh"
   config.vm.provision :reload
-  config.vm.provision "shell", path: "install-guest-additions.sh", env: { "VBOX_VERSION": vbox_version }
+  config.vm.provision "shell", path: "src/install-guest-additions.sh", env: { "VBOX_VERSION": vbox_version }
+  config.vm.provision :reload
 end

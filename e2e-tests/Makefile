@@ -1,5 +1,3 @@
-include ../tools/tools.mk
-
 PROVIDER ?= virtualbox
 BOX_DIR  := vagrant-box
 
@@ -10,7 +8,7 @@ up:
 	vagrant up --provider=$(PROVIDER)
 
 down:
-	vagrant down $(LOGGED)
+	vagrant down
 
 test: up
 
