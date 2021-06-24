@@ -9,7 +9,8 @@ import (
 func TestMain(t *testing.T) {
 	tf := fixtures.NewTerraformTestFixture(t, "test", "1.0.0")
 	defer tf.TearDown()
-	pve := fixtures.NewProxmoxTestFixture(t, "https://localhost:8006")
-	pve.Start()
-	defer pve.TearDown()
+
+	var pve *fixtures.ProxmoxTestFixture
+	defer func() { pve.TearDown() }()
+	pve = <-fixtures.NewProxmoxTestFixture(t, "https://localhost:8006")
 }
