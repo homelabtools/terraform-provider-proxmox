@@ -35,8 +35,7 @@ func NewTerraformTestFixture(t *testing.T, name, tfVersion string) *TerraformTes
 // TearDown removes every trace the test fixture.
 // It should be called with defer right after creating the fixture.
 func (f *TerraformTestFixture) TearDown() {
-	if os.Getenv("SKIP_CLEANUP") != "" {
-		f.T.Logf("SKIP_CLEANUP env var found, skipping cleanup of '%s'", f.Name)
+	if !f.ShouldClean(f) {
 		return
 	}
 	if os.RemoveAll(f.Directory) != nil {

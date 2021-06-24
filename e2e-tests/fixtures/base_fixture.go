@@ -1,6 +1,8 @@
 package fixtures
 
 import (
+	"os"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,4 +21,14 @@ func NewBaseFixture(t *testing.T) BaseFixture {
 		Assert:  assert.New(t),
 		Require: require.New(t),
 	}
+}
+
+func (f *BaseFixture) ShouldClean(fixture interface{}) bool {
+	if os.Getenv("SKIP_CLEANUP") != "" {
+		if fixture != nil {
+			f.T.Logf("SKIP_CLEANUP env var found, skipping cleanup of %s", reflect.TypeOf(fixture))
+		}
+		return false
+	}
+	return true
 }

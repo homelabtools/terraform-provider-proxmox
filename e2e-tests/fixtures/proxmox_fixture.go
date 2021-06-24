@@ -1,7 +1,6 @@
 package fixtures
 
 import (
-	"os"
 	"testing"
 )
 
@@ -36,8 +35,7 @@ func (f *ProxmoxTestFixture) start() error {
 // TearDown removes every trace the test fixture.
 // It should be called with defer right after creating the fixture.
 func (f *ProxmoxTestFixture) TearDown() {
-	if os.Getenv("SKIP_CLEANUP") != "" {
-		f.T.Logf("SKIP_CLEANUP env var found, skipping cleanup of '%s'", f.Endpoint)
+	if !f.ShouldClean(f) {
 		return
 	}
 	_, err := run("make", "destroy")
