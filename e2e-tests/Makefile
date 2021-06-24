@@ -3,15 +3,17 @@ BOX_DIR  := vagrant-box
 
 default: test
 
-up:
-	#cd $(BOX_DIR) && make
-	vagrant up --provider=$(PROVIDER)
+vagrant-box:
+	cd $(BOX_DIR) && time make
+
+up: vagrant-box
+	time vagrant up --provider=$(PROVIDER)
 
 down:
-	vagrant down
+	time vagrant down
 
 destroy:
-	vagrant destroy -f
+	time vagrant destroy -f
 
 test: up
 

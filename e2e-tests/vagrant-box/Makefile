@@ -12,14 +12,14 @@ box: $(BOX_PATH)
 $(BOX_PATH): $(BOX_SRC)
 	mkdir -p $(dir $(BOX_PATH))
 	vagrant destroy -f || true
-	vagrant up --provider=$(PROVIDER)
-	vagrant package --output $(BOX_PATH)
-	vagrant box add $(BOX_PATH) --name $(BOX_NAME) --force
+	time vagrant up --provider=$(PROVIDER)
+	time vagrant package --output $(BOX_PATH)
+	time vagrant box add $(BOX_PATH) --name $(BOX_NAME) --force
 	# Clean up VM
-	vagrant destroy -f
+	time vagrant destroy -f
 
 check:
-	shellcheck --severity=style *.sh
+	time shellcheck --severity=style *.sh
 
 clean:
 	vagrant box remove $(BOX_NAME) --force --all || true
