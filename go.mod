@@ -27,9 +27,11 @@ require (
 	github.com/mitchellh/mapstructure v1.4.0 // indirect
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/onsi/ginkgo v1.16.4
+	github.com/pkg/errors v0.9.1
 	github.com/pkg/sftp v1.12.0
 	github.com/posener/complete v1.2.3 // indirect
 	github.com/spf13/afero v1.5.1 // indirect
+	github.com/stretchr/testify v1.6.1
 	github.com/ulikunitz/xz v0.5.9 // indirect
 	github.com/vmihailenco/tagparser v0.1.2 // indirect
 	github.com/zclconf/go-cty v1.7.1 // indirect

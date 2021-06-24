@@ -7,7 +7,7 @@ PROXMOX_URL      := https://127.0.0.1:$(HOST_PORT)
 
 default: box
 
-box: prereqs $(BOX_PATH)
+box: $(BOX_PATH)
 
 $(BOX_PATH): $(BOX_SRC)
 	mkdir -p $(dir $(BOX_PATH))
@@ -28,6 +28,3 @@ clean:
 
 clean-logs:
 	rm -rf $(BUILD_LOG_DIR)
-
-prereqs:
-	vagrant plugin install vagrant-reload

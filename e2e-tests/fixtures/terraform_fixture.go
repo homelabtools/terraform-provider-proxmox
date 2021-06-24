@@ -7,10 +7,10 @@ import (
 )
 
 type TerraformTestFixture struct {
+	BaseFixture
 	Directory        string
 	Name             string
 	TerraformVersion string
-	T                *testing.T
 }
 
 // NewTerraformTestFixture creates a new test fixture for testing Terraform providers.
@@ -25,10 +25,10 @@ func NewTerraformTestFixture(t *testing.T, name, tfVersion string) *TerraformTes
 	}
 	t.Logf("Created TF test fixture named '%s' at '%s', TF version '%s'", name, dir, tfVersion)
 	return &TerraformTestFixture{
+		BaseFixture:      NewBaseFixture(t),
 		Name:             name,
 		Directory:        dir,
 		TerraformVersion: tfVersion,
-		T:                t,
 	}
 }
 
@@ -37,6 +37,7 @@ func NewTerraformTestFixture(t *testing.T, name, tfVersion string) *TerraformTes
 func (f *TerraformTestFixture) TearDown() {
 	if os.Getenv("SKIP_CLEANUP") != "" {
 		f.T.Logf("SKIP_CLEANUP env var found, skipping cleanup of '%s'", f.Name)
+		return
 	}
 	if os.RemoveAll(f.Directory) != nil {
 		// Fatal is used here because this should never really happen,
