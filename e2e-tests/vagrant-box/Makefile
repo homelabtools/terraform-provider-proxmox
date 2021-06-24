@@ -13,8 +13,6 @@ $(BOX_PATH): $(BOX_SRC)
 	mkdir -p $(dir $(BOX_PATH))
 	vagrant destroy -f || true
 	vagrant up --provider=$(PROVIDER)
-	# Wait for Proxmox to come up before packaging the box
-	timeout 300 sh -cx "while [ $$(curl -kLso /dev/null -w %{http_code} $(PROXMOX_URL)) != 200 ]; do sleep 1; done"
 	vagrant package --output $(BOX_PATH)
 	vagrant box add $(BOX_PATH) --name $(BOX_NAME) --force
 	# Clean up VM

@@ -11,8 +11,20 @@ Vagrant.configure("2") do |config|
   host_port = ENV["HOST_PORT"] || 8006
 
   config.vm.network "forwarded_port", guest: 8006, host: host_port
+
+  config.vm.provision "file", source: "src/wait-for-http-status.sh", destination: "/tmp/wait-for-http-status.sh"
+  config.vm.provision "shell", inline: "mv /tmp/wait-for-http-status.sh /usr/bin/wait-for-http-status && chmod +x /usr/bin/wait-for-http-status"
+
+  # Install Proxmox and reboot into the new Proxmox kernel
   config.vm.provision "shell", path: "src/install-proxmox.sh"
   config.vm.provision :reload
+
+  # Reinstall guest additions for the new kernel
   config.vm.provision "shell", path: "src/install-guest-additions.sh", env: { "VBOX_VERSION": vbox_version }
   config.vm.provision :reload
+
+  # Wait for Proxmox to come up
+  proxmox_guest_url = "https://127.0.0.1:8006"
+	config.vm.provision "shell",
+    inline: "wait-for-http-status #{proxmox_guest_url} 200 || (echo 'Proxmox failed to come up at #{proxmox_guest_url}, something is broken in the provisioning process'; exit 1)"
 end
