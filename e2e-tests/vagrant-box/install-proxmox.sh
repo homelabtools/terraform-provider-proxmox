@@ -23,7 +23,7 @@ HERE
     export DEBIAN_FRONTEND=noninteractive
     apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade
     apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install proxmox-ve postfix open-iscsi
-    reboot
+    rm /etc/apt/sources.list.d/pve-enterprise.list
 }
 
 main

@@ -6,8 +6,8 @@ BOX_DIR  := vagrant-box
 default: test
 
 up:
-	cd $(BOX_DIR) && make $(LOGGED)
-	vagrant up --provider=$(PROVIDER) $(LOGGED)
+	cd $(BOX_DIR) && make
+	vagrant up --provider=$(PROVIDER)
 
 down:
 	vagrant down $(LOGGED)
@@ -15,7 +15,7 @@ down:
 test: up
 
 shell: up
-	vagrant ss
+	vagrant ssh
 
 clean:
 	vagrant destroy -f || true
