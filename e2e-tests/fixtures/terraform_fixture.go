@@ -1,8 +1,10 @@
 package fixtures
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -24,12 +26,19 @@ func NewTerraformTestFixture(t *testing.T, name, tfVersion string) *TerraformTes
 		t.Fatal("Unable to create temp directory for Terraform test fixture")
 	}
 	t.Logf("Created TF test fixture named '%s' at '%s', TF version '%s'", name, dir, tfVersion)
-	return &TerraformTestFixture{
+	f := &TerraformTestFixture{
 		BaseFixture:      NewBaseFixture(t),
 		Name:             name,
 		Directory:        dir,
 		TerraformVersion: tfVersion,
 	}
+	f.writeMainTF("https://127.0.0.1:8006")
+	return f
+}
+
+func (f *TerraformTestFixture) WriteFile(filename, contents string) {
+	err := ioutil.WriteFile(filepath.Join(f.Directory, filename), []byte(contents), 0644)
+	f.Require.NoErrorf(err, "expected to be able to write to file '%s'", filename)
 }
 
 // TearDown removes every trace the test fixture.
@@ -43,4 +52,18 @@ func (f *TerraformTestFixture) TearDown() {
 		// and if it did, may indicate something is very wrong.
 		f.T.Fatal("Unable to clean up temp directory")
 	}
+}
+
+func (f *TerraformTestFixture) writeMainTF(endpoint string) {
+	f.WriteFile("main.tf", fmt.Sprintf(`
+provider "proxmox" {
+  virtual_environment {
+    endpoint = %s
+    username = vagrant
+    password = vagrant
+    insecure = true
+  }
+}
+`, endpoint))
+
 }
