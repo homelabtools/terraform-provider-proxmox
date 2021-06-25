@@ -27,8 +27,8 @@ func NewProxmoxTestFixture(t *testing.T, endpoint string) chan *ProxmoxTestFixtu
 
 // start brings up the Proxmox VM
 func (f *ProxmoxTestFixture) start() error {
-	_, err := run("make", "up")
-	f.Require.NoError(err, "expected `make up` to work")
+	_, err := run("vagrant", "up")
+	f.Require.NoError(err, "expected `vagrant up` to work")
 	return nil
 }
 
@@ -38,6 +38,6 @@ func (f *ProxmoxTestFixture) TearDown() {
 	if !f.ShouldClean(f) {
 		return
 	}
-	_, err := run("make", "destroy")
-	f.Assert.NoError(err, "expected `make destroy` to work")
+	_, err := run("vagrant", "destroy")
+	f.Assert.NoError(err, "expected `vagrant destroy` to work")
 }
