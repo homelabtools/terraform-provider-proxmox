@@ -24,6 +24,9 @@ HERE
     apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade
     apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install proxmox-ve postfix open-iscsi
     rm /etc/apt/sources.list.d/pve-enterprise.list
+    apt remove os-prober  # As recommended by Proxmox wiki
+    # Give a password to user vagrant so it can be used for PAM auth in browser/tests
+    printf 'vagrant\nvagrant\n' | passwd vagrant
 }
 
 main
