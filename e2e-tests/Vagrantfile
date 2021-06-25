@@ -12,4 +12,5 @@ Vagrant.configure("2") do |config|
   proxmox_url = "https://127.0.0.1:#{host_port}"
 	config.vm.provision "shell",
     inline: "wait-for-http-status #{proxmox_url} 200 || (echo 'Proxmox failed to come up at #{proxmox_url}, something is broken in the provisioning process'; exit 1)"
+	config.vm.provision "shell", inline: "echo Proxmox web UI located at #{proxmox_url}"
 end
