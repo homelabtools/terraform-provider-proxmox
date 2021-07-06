@@ -55,15 +55,25 @@ func (f *TerraformTestFixture) TearDown() {
 }
 
 func (f *TerraformTestFixture) writeMainTF(endpoint string) {
-	f.WriteFile("main.tf", fmt.Sprintf(`
-provider "proxmox" {
+	f.WriteFile("provider.tf", fmt.Sprintf(`
+provider "proxmox"{
   virtual_environment {
     endpoint = %s
-    username = vagrant
-    password = vagrant
+    username = "root@pam"
+    password = "proxmox"
     insecure = true
   }
 }
+
+terraform {
+  required_version = ">=1.0.0"
+  required_providers {
+    proxmox = {
+      source = "registry.terraform.io/danitso/proxmox"
+    }
+  }
+}
+
 `, endpoint))
 
 }
