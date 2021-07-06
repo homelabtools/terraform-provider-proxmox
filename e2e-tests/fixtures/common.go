@@ -1,15 +1,21 @@
 package fixtures
 
 import (
-	"fmt"
+	"io"
 	"log"
+	"os"
 	"os/exec"
 
 	"github.com/pkg/errors"
 )
 
-// Run runs a command and echoes the output to stdout
+// run runs a command and echoes the output to stdout
 func run(name string, args ...string) error {
+	return errors.WithStack(runf(os.Stdout, name, args...))
+}
+
+// runf runs a command and echoes the output to the specified stream
+func runf(out io.Writer, name string, args ...string) error {
 	log.Printf("Running command `%s` with args %#q", name, args)
 	c := exec.Command(name, args...)
 	c.Stderr = c.Stdout
@@ -21,10 +27,11 @@ func run(name string, args ...string) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed trying to run '%s' with args '%#q'", name, args)
 	}
+	// Stream output asynchronously
 	for {
 		tmp := make([]byte, 1024)
 		_, err := stdout.Read(tmp)
-		fmt.Print(string(tmp))
+		out.Write(tmp)
 		if err != nil {
 			break
 		}
