@@ -17,7 +17,7 @@ down:
 destroy:
 	$(TIME) vagrant destroy -f
 
-test: up
+test:
 	go test -v .
 
 shell: up
