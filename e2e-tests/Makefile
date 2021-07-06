@@ -1,7 +1,7 @@
 PROVIDER ?= virtualbox
 BOX_DIR  := vagrant-box
 
-TIME := /bin/time -f "Time elapsed %E from command: %C"
+TIME := /usr/bin/env time -f "Time elapsed %E from command: %C"
 
 default: test
 
