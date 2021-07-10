@@ -51,6 +51,7 @@ func NewVirtualEnvironmentClient(endpoint, username, password, otp string, insec
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: insecure,
 			},
+			Proxy: http.ProxyFromEnvironment,
 		},
 	}
 

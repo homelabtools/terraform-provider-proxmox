@@ -1,0 +1,6 @@
+resources:
+  - role:
+      example:
+        privileges:
+          - VM.Monitor
+        role_id: "test-role"

@@ -32,6 +32,7 @@ build:
 	mkdir -p "$(TERRAFORM_PLUGIN_DIRECTORY)"
 	rm -f "$(TERRAFORM_PLUGIN_EXECUTABLE)"
 	go build -o "$(TERRAFORM_PLUGIN_EXECUTABLE)"
+	cp -f "$(TERRAFORM_PLUGIN_EXECUTABLE)" ~/.terraform.d/
 
 example: example-build example-init example-apply example-apply example-destroy
 
