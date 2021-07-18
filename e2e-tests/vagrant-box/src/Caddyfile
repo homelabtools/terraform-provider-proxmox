@@ -1,0 +1,9 @@
+# Creates a non-secure reverse proxy of PVE, useful for capturing HTTP traffic when testing.
+# This is easier than doing MITM proxying and working with installing certificates.
+:80 {
+	reverse_proxy https://localhost:8006 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
+}

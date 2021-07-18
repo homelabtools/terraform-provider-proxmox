@@ -1,21 +1,19 @@
 PROVIDER ?= virtualbox
 BOX_DIR  := vagrant-box
 
-TIME := /usr/bin/env time -f "Time elapsed %E from command: %C"
-
 default: test
 
 vagrant-box:
-	cd $(BOX_DIR) && $(TIME) make
+	cd $(BOX_DIR) && time make
 
 up: vagrant-box
-	$(TIME) vagrant up --provider=$(PROVIDER)
+	time vagrant up --provider=$(PROVIDER)
 
 down:
-	$(TIME) vagrant down
+	time vagrant down
 
 destroy:
-	$(TIME) vagrant destroy -f
+	time vagrant destroy -f
 
 test:
 	go test -v .
@@ -30,8 +28,4 @@ clean:
 clean-box:
 	cd $(BOX_DIR) && make clean
 
-clean-logs:
-	rm -rf $(BUILD_LOG_DIR)
-	cd $(BOX_DIR) && make clean-logs
-
-clean-all: clean clean-box clean-logs
+clean-all: clean clean-box

@@ -20,15 +20,19 @@ import (
 	"github.com/google/go-querystring/query"
 )
 
+// This only gets set during build time when using -ldflags.
+// It should only be set when building for tests. It also must be of type string.
+var disableHTTPSCheck string
+
 // NewVirtualEnvironmentClient creates and initializes a VirtualEnvironmentClient instance.
 func NewVirtualEnvironmentClient(endpoint, username, password, otp string, insecure bool) (*VirtualEnvironmentClient, error) {
-	url, err := url.ParseRequestURI(endpoint)
+	u, err := url.ParseRequestURI(endpoint)
 
 	if err != nil {
 		return nil, errors.New("You must specify a valid endpoint for the Proxmox Virtual Environment API (valid: https://host:port/)")
 	}
 
-	if url.Scheme != "https" {
+	if disableHTTPSCheck == "" && u.Scheme != "https" {
 		return nil, errors.New("You must specify a secure endpoint for the Proxmox Virtual Environment API (valid: https://host:port/)")
 	}
 
@@ -56,7 +60,7 @@ func NewVirtualEnvironmentClient(endpoint, username, password, otp string, insec
 	}
 
 	return &VirtualEnvironmentClient{
-		Endpoint:   strings.TrimRight(url.String(), "/"),
+		Endpoint:   strings.TrimRight(u.String(), "/"),
 		Insecure:   insecure,
 		OTP:        pOTP,
 		Password:   password,

@@ -14,17 +14,29 @@ main() {
 $ip $FQDN $HOSTNAME
 HERE
 
-    apt-get -y install gnupg2
     hostnamectl set-hostname "$FQDN" --static
+
+    apt install -y gnupg2 debian-keyring debian-archive-keyring apt-transport-https
+
+    # Fetch Proxmox key
     wget -qO - "$PROXMOX_MIRROR/proxmox-ve-release-6.x.gpg" | apt-key add -
     echo "deb $PROXMOX_MIRROR/pve buster pve-no-subscription" | tee /etc/apt/sources.list.d/pve-install-repo.list
     echo "deb $PROXMOX_MIRROR/ceph-nautilus buster main" | tee /etc/apt/sources.list.d/ceph.list
-    apt-get -y update
+
+    # Fetch Caddy key
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | apt-key add -
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+
+    apt -y update
+    apt -y install caddy
+
     export DEBIAN_FRONTEND=noninteractive
     apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade
     apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install proxmox-ve postfix open-iscsi
+
     rm /etc/apt/sources.list.d/pve-enterprise.list
     apt remove os-prober  # As recommended by Proxmox wiki
+
     printf 'proxmox\nproxmox\n' | passwd root
 }
 

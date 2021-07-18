@@ -10,9 +10,10 @@ Vagrant.configure("2") do |config|
   end
 
   vbox_version = `VBoxManage --version | awk -F'r' '{print $1}'`.strip
-  host_port = ENV["HOST_PORT"] || 8006
+  host_port = ENV["HOST_PORT"] || 8000
 
-  config.vm.network "forwarded_port", guest: 8006, host: host_port
+  config.vm.network "forwarded_port", guest: 80, host: host_port
+  config.vm.network "forwarded_port", guest: 8006, host: 8006
 
   config.vm.provision "file", source: "src/wait-for-http-status.sh", destination: "/tmp/wait-for-http-status.sh"
   config.vm.provision "shell", inline: "mv /tmp/wait-for-http-status.sh /usr/bin/wait-for-http-status && chmod +x /usr/bin/wait-for-http-status"
@@ -21,12 +22,15 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell", path: "src/install-proxmox.sh"
   config.vm.provision :reload
 
+  config.vm.provision "file", source: "src/Caddyfile", destination: "/tmp/Caddyfile"
+  config.vm.provision "shell", inline: "mv -f /tmp/Caddyfile /etc/caddy/Caddyfile"
+
   # Reinstall guest additions for the new kernel
   config.vm.provision "shell", path: "src/install-guest-additions.sh", env: { "VBOX_VERSION": vbox_version }
   config.vm.provision :reload
 
   # Wait for Proxmox to come up
-  proxmox_guest_url = "https://127.0.0.1:8006"
+  proxmox_guest_url = "http://127.0.0.1"
 	config.vm.provision "shell",
     inline: "wait-for-http-status #{proxmox_guest_url} 200 || (echo 'Proxmox failed to come up at #{proxmox_guest_url}, something is broken in the provisioning process'; exit 1)"
 end

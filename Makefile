@@ -1,4 +1,5 @@
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
+MODULE := $(shell awk 'NR==1{print $$2}' go.mod)
 NAME=$$(grep TerraformProviderName proxmoxtf/version.go | grep -o -e 'terraform-provider-[a-z]*')
 TARGETS=darwin linux windows
 TERRAFORM_PLUGIN_EXTENSION=
@@ -10,7 +11,7 @@ ifeq ($(OS),Windows_NT)
 	TERRAFORM_PLUGIN_CACHE_DIRECTORY=$$(cygpath -u "$(shell pwd -P)")/cache/plugins
 	TERRAFORM_PLUGIN_EXTENSION=.exe
 else
-	UNAME_S=$$(shell uname -s)
+	UNAME_S=$(shell uname -s)
 
 	ifeq ($(UNAME_S),Darwin)
 		TERRAFORM_PLATFORM=darwin_amd64
@@ -31,8 +32,10 @@ default: build
 build:
 	mkdir -p "$(TERRAFORM_PLUGIN_DIRECTORY)"
 	rm -f "$(TERRAFORM_PLUGIN_EXECUTABLE)"
-	go build -o "$(TERRAFORM_PLUGIN_EXECUTABLE)"
-	cp -f "$(TERRAFORM_PLUGIN_EXECUTABLE)" ~/.terraform.d/
+	go build -ldflags="-s -w -X $(MODULE)/proxmox.disableHTTPSCheck=true" -o "$(TERRAFORM_PLUGIN_EXECUTABLE)"
+	# TODO: better
+	mkdir -p ~/.terraform.d/plugins/registry.terraform.io/danitso/proxmox/$(VERSION)/$(TERRAFORM_PLATFORM)
+	cp -f "$(TERRAFORM_PLUGIN_EXECUTABLE)" ~/.terraform.d/plugins/registry.terraform.io/danitso/proxmox/$(VERSION)/$(TERRAFORM_PLATFORM)/$(NAME)_v$(VERSION)_x4$(TERRAFORM_PLUGIN_EXTENSION)
 
 example: example-build example-init example-apply example-apply example-destroy
 
@@ -74,7 +77,7 @@ example-plan:
 fmt:
 	gofmt -s -w $(GOFMT_FILES)
 
-init:"
+init:
 	go get ./...
 
 targets: $(TARGETS)

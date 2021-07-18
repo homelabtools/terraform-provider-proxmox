@@ -5,9 +5,9 @@ resource "proxmox_virtual_environment_role" "example" {
   role_id = "test-role"
 }
 
-provider "proxmox"{
+provider "proxmox" {
   virtual_environment {
-    endpoint = "https://127.0.0.1:8006"
+    endpoint = "http://localhost:8000"
     username = "root@pam"
     password = "proxmox"
     insecure = true
