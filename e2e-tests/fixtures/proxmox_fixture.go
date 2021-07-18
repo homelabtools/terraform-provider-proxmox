@@ -72,15 +72,15 @@ func (f *ProxmoxTestFixture) start() {
 // TearDown removes every trace the test fixture.
 // It should be called with defer right after creating the fixture.
 func (f *ProxmoxTestFixture) TearDown() {
-	if !f.ShouldClean(f) {
-		return
-	}
 	// Save a snapshot after the fixture has been used. It can be inspected for debugging tests.
 	err := f.SaveSnapshot(f.snapshotEndName)
 	f.Assert.NoErrorf(err, "failed to save teardown snapshot for fixture '%s'")
 	// Restore the test start snapshot, undoing all state changes since start.
 	err = f.RestoreSnapshot(f.snapshotStartName)
 	f.Assert.NoErrorf(err, "failed to restore initial snapshot for fixture '%s', this VM is not in a clean state, destroy it")
+	if !f.ShouldClean(f) {
+		return
+	}
 	// Turn off the VM.
 	err = f.Halt()
 	f.Assert.NoErrorf(err, "failed shutting down VM for fixture '%s'", f.FixtureName)

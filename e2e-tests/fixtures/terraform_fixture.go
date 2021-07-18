@@ -3,36 +3,52 @@ package fixtures
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
+
+	"github.com/gruntwork-io/terratest/modules/terraform"
+	"github.com/stretchr/testify/require"
 )
 
 type TerraformTestFixture struct {
 	BaseFixture
 	Directory        string
-	Name             string
 	TerraformVersion string
+	Options          *terraform.Options
 }
 
 // NewTerraformTestFixture creates a new test fixture for testing Terraform providers.
 // It creates a temporary directory where .tf files will be written.
 //
 // tfVersion - version of TF to use
-// name      - an optional string for extra description.
-func NewTerraformTestFixture(t *testing.T, name, tfVersion string) *TerraformTestFixture {
-	dir, err := ioutil.TempDir("", name)
-	if err != nil {
-		t.Fatal("Unable to create temp directory for Terraform test fixture")
-	}
-	t.Logf("Created TF test fixture named '%s' at '%s', TF version '%s'", name, dir, tfVersion)
+// endpoint  - URL of Proxmox instance
+// username  - Proxmox username
+// password  - Proxmox password
+func NewTerraformTestFixture(t *testing.T, testSourceDir, tfVersion, endpoint, username, password string) *TerraformTestFixture {
+	name := filepath.Base(testSourceDir)
+	dir := filepath.Join("testbed", fmt.Sprintf("%s-%s", name, time.Now().Format(time.Stamp)))
+	require.NoError(t, os.MkdirAll(filepath.Dir(dir), 0755))
+
+	// TODO: Don't rely on cp, use library
+	cmd := exec.Command("cp", "-a", testSourceDir, dir)
+	require.NoError(t, cmd.Run(), "failed to copy test case at '%s' into testbed directory at '%s'", testSourceDir, dir)
+
+	t.Logf("Created TF test fixture at '%s', TF version '%s'", dir, tfVersion)
+	// TODO: actually handle TF version, fetch TF binaries
 	f := &TerraformTestFixture{
 		BaseFixture:      NewBaseFixture(t),
-		Name:             name,
 		Directory:        dir,
 		TerraformVersion: tfVersion,
+		Options: terraform.WithDefaultRetryableErrors(t, &terraform.Options{
+			TerraformDir: dir,
+		}),
 	}
-	f.writeMainTF("https://127.0.0.1:8006")
+
+	f.writeProviderTF(endpoint, username, password)
 	return f
 }
 
@@ -47,6 +63,7 @@ func (f *TerraformTestFixture) TearDown() {
 	if !f.ShouldClean(f) {
 		return
 	}
+	log.Println(terraform.Destroy(f.T, f.Options))
 	if os.RemoveAll(f.Directory) != nil {
 		// Fatal is used here because this should never really happen,
 		// and if it did, may indicate something is very wrong.
@@ -54,19 +71,30 @@ func (f *TerraformTestFixture) TearDown() {
 	}
 }
 
-func (f *TerraformTestFixture) writeMainTF(endpoint string) {
+func (f *TerraformTestFixture) Init() *TerraformTestFixture {
+	log.Println(terraform.Init(f.T, f.Options))
+	return f
+}
+
+func (f *TerraformTestFixture) Apply() *TerraformTestFixture {
+	log.Println(terraform.ApplyAndIdempotent(f.T, f.Options))
+	return f
+}
+
+func (f *TerraformTestFixture) writeProviderTF(endpoint, username, password string) {
 	f.WriteFile("provider.tf", fmt.Sprintf(`
 provider "proxmox"{
   virtual_environment {
-    endpoint = %s
-    username = "root@pam"
-    password = "proxmox"
+    endpoint = "%s"
+    username = "%s"
+    password = "%s"
     insecure = true
   }
 }
 
 terraform {
-  required_version = ">=1.0.0"
+  # TODO version stuff
+  #required_version = "== 1.0.0"
   required_providers {
     proxmox = {
       source = "registry.terraform.io/danitso/proxmox"
@@ -74,6 +102,6 @@ terraform {
   }
 }
 
-`, endpoint))
+`, endpoint, username, password))
 
 }
