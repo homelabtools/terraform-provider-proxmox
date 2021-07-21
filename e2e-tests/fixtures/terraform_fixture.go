@@ -30,7 +30,7 @@ type TerraformTestFixture struct {
 // password  - Proxmox password
 func NewTerraformTestFixture(t *testing.T, testSourceDir, tfVersion, endpoint, username, password string) *TerraformTestFixture {
 	name := filepath.Base(testSourceDir)
-	dir := filepath.Join("testbed", fmt.Sprintf("%s-%s", name, time.Now().Format(time.Stamp)))
+	dir := filepath.Join("testbed", fmt.Sprintf("%s-%s", name, time.Now().Format(FileTimestampFormat)))
 	require.NoError(t, os.MkdirAll(filepath.Dir(dir), 0755))
 
 	// TODO: Don't rely on cp, use library
@@ -48,7 +48,7 @@ func NewTerraformTestFixture(t *testing.T, testSourceDir, tfVersion, endpoint, u
 		}),
 	}
 
-	f.writeProviderTF(endpoint, username, password)
+	f.writeProviderTF(tfVersion, endpoint, username, password)
 	return f
 }
 
@@ -81,7 +81,7 @@ func (f *TerraformTestFixture) Apply() *TerraformTestFixture {
 	return f
 }
 
-func (f *TerraformTestFixture) writeProviderTF(endpoint, username, password string) {
+func (f *TerraformTestFixture) writeProviderTF(tfVersion, endpoint, username, password string) {
 	f.WriteFile("provider.tf", fmt.Sprintf(`
 provider "proxmox"{
   virtual_environment {
@@ -94,7 +94,7 @@ provider "proxmox"{
 
 terraform {
   # TODO version stuff
-  #required_version = "== 1.0.0"
+  #required_version = "== %s"
   required_providers {
     proxmox = {
       source = "registry.terraform.io/danitso/proxmox"
@@ -102,6 +102,5 @@ terraform {
   }
 }
 
-`, endpoint, username, password))
-
+`, endpoint, username, password, tfVersion))
 }

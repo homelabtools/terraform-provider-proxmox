@@ -1,5 +1,6 @@
 PROVIDER ?= virtualbox
 BOX_DIR  := vagrant-box
+TESTBED  := testbed
 
 default: test
 
@@ -22,6 +23,7 @@ shell: up
 	vagrant ssh
 
 clean:
+	rm -rf $(TESTBED)
 	vagrant destroy -f || true
 	rm -rf .vagrant
 

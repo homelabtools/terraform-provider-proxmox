@@ -9,6 +9,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Timestamp format that works with filenames Windows (has no colon)
+const FileTimestampFormat = "Mon_Jan_02_15-04-05PM"
+
 // run runs a command and echoes the output to stdout
 func run(name string, args ...string) error {
 	return errors.WithStack(runf(os.Stdout, name, args...))
