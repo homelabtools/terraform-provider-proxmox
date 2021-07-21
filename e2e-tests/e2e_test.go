@@ -4,21 +4,54 @@ import (
 	"testing"
 
 	"github.com/danitso/terraform-provider-proxmox/e2e-tests/fixtures"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
 var endpoint = "http://localhost:8000"
 
-// TODO: Have Proxmox fixture optionally created during suite setup in addition to test setup.
+type E2ESuite struct {
+	suite.Suite
+	ProxmoxFixture *fixtures.ProxmoxTestFixture
+}
+
+func TestE2ESuite(t *testing.T) {
+	suite.Run(t, new(E2ESuite))
+}
+
+func (s *E2ESuite) SetupSuite() {
+	s.ProxmoxFixture = <-fixtures.NewProxmoxTestFixture(s.T(), fixtures.ProxmoxTestFixtureOptions{})
+}
+
+func (s *E2ESuite) TearDownSuite() {
+	s.ProxmoxFixture.TearDown()
+}
+
+var testCases = []struct {
+	Name      string
+	TFVersion string
+}{
+	{
+		Name:      "TF 1.0.1",
+		TFVersion: "1.0.1",
+	},
+}
 
 func TestMain(t *testing.T) {
-	// Proxmox fixture should come first. Specifically, Proxmox TearDown should happen *after* TF TearDown.
-	// Otherwise TF TearDown fails because the VM no longer exists.
-	var pve *fixtures.ProxmoxTestFixture
-	defer func() { pve.TearDown() }()
-	pve = <-fixtures.NewProxmoxTestFixture(t, fixtures.ProxmoxTestFixtureOptions{})
+	require := require.New(t)
+	pve := <-fixtures.NewProxmoxTestFixture(t, fixtures.ProxmoxTestFixtureOptions{})
+	defer pve.TearDown()
 
-	tf := fixtures.NewTerraformTestFixture(t, "cases/simple", "1.0.1", endpoint, "root@pam", "proxmox")
-	defer tf.TearDown()
+	require.NoError(pve.SaveSnapshot("StartOfSuite"), "unable to save snapshot at start of test suite")
+	for _, testCase := range testCases {
+		snapshotName := "TestCase-" + testCase.Name
+		require.NoErrorf(pve.SaveSnapshot(snapshotName), "unable to save snapshot at start of test '%s'", testCase.Name)
+		defer require.NoErrorf(pve.RestoreSnapshot(snapshotName), "unable to restore snapshot at end of test '%s'", testCase.Name)
 
-	tf.Init().Apply()
+		t.Run(testCase.Name, func(t *testing.T) {
+			tf := fixtures.NewTerraformTestFixture(t, "cases/simple", testCase.TFVersion, endpoint, "root@pam", "proxmox")
+			defer tf.TearDown()
+			tf.Init().Apply()
+		})
+	}
 }

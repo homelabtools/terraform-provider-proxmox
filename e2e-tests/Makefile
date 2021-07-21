@@ -19,6 +19,10 @@ destroy:
 test:
 	go test -v .
 
+# Same as test but skip the cleanup for debugging purposes
+test-debug: SKIP_CLEANUP = 1
+test-debug: test
+
 shell: up
 	vagrant ssh
 
