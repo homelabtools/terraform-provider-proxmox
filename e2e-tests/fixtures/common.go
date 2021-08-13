@@ -1,6 +1,8 @@
 package fixtures
 
 import (
+	"bufio"
+	"bytes"
 	"io"
 	"log"
 	"os"
@@ -13,12 +15,27 @@ import (
 const FileTimestampFormat = "Mon_Jan_02_15-04-05PM"
 
 // run runs a command and echoes the output to stdout
-func run(name string, args ...string) error {
-	return errors.WithStack(runf(os.Stdout, name, args...))
+func runStdout(name string, args ...string) error {
+	return errors.WithStack(run(os.Stdout, name, args...))
 }
 
-// runf runs a command and echoes the output to the specified stream
-func runf(out io.Writer, name string, args ...string) error {
+// runCaptureLines runs a command and returns the output sliced by newlines
+func runCaptureLines(name string, args ...string) ([]string, error) {
+	buf := &bytes.Buffer{}
+	err := run(buf, name, args...)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	lines := []string{}
+	scanner := bufio.NewScanner(buf)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+	return lines, nil
+}
+
+// run runs a command and echoes the output to the specified stream
+func run(out io.Writer, name string, args ...string) error {
 	log.Printf("Running command `%s` with args %#q", name, args)
 	c := exec.Command(name, args...)
 	c.Stderr = c.Stdout
