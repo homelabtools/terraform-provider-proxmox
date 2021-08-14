@@ -1,7 +1,12 @@
 package fixtures
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"net/http"
+	"net/url"
 	"testing"
 	"time"
 )
@@ -19,12 +24,15 @@ type ProxmoxTestFixture struct {
 	// Name is a descriptive name for this test fixture.
 	Name string
 	// URL of Proxmox instance
-	Endpoint string
+	Endpoint     string
+	httpClient   *http.Client
+	testUsername string
+	testPassword string
 }
 
 // NewProxmoxTestFixture creates a new Vagrant-based test fixture for working with Proxmox.
 // Calling this function will asynchronously bring up a VM for running Proxmox.
-func NewProxmoxTestFixture(t *testing.T, vagrantProvider, proxmoxEndpoint, name string) chan *ProxmoxTestFixture {
+func NewProxmoxTestFixture(t *testing.T, vagrantProvider, proxmoxEndpoint, name, testUsername, testPassword string) chan *ProxmoxTestFixture {
 	base := NewBaseFixture(t)
 	c := make(chan *ProxmoxTestFixture, 1)
 	func() {
@@ -34,6 +42,9 @@ func NewProxmoxTestFixture(t *testing.T, vagrantProvider, proxmoxEndpoint, name 
 			VagrantProvider:    vagrantProvider,
 			Name:               name,
 			Endpoint:           proxmoxEndpoint,
+			httpClient:         http.DefaultClient,
+			testUsername:       testUsername,
+			testPassword:       testPassword,
 		}
 		f.start()
 		c <- f
@@ -57,4 +68,22 @@ func (f *ProxmoxTestFixture) TearDown() {
 	// Turn off the VM.
 	err := f.Halt()
 	f.Assert.NoErrorf(err, "failed shutting down VM for fixture '%s'", f.Name)
+}
+
+func (f *ProxmoxTestFixture) APIGet(apiName string) map[string]interface{} {
+	params := fmt.Sprintf("?username=%s&password=%s", f.testUsername, f.testPassword)
+	url, err := url.Parse(f.Endpoint + "/" + apiName + params)
+	f.Require.NoErrorf(err, "Invalid API name, should be in the form of e.g. 'access/roles'")
+	resp, err := f.httpClient.Do(&http.Request{
+		Method: "GET",
+		URL:    url,
+	})
+	// TODO: JSON path for ticket is data.ticket
+	f.Require.NoErrorf(err, "Unexpected error when performing HTTP GET on '%s'", url.String())
+	jsonBody, err := ioutil.ReadAll(resp.Body)
+	f.Require.NoErrorf(err, "Unexpected error when reading response from '%s'", url.String())
+	var jsonObj map[string]interface{}
+	err = json.Unmarshal(jsonBody, &jsonObj)
+	f.Require.NoErrorf(err, "Unexpected error when unmarshaling JSON from '%s'", url.String())
+	return jsonObj
 }

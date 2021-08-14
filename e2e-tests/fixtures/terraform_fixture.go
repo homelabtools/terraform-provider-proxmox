@@ -2,7 +2,6 @@ package fixtures
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -53,7 +52,7 @@ func NewTerraformTestFixture(t *testing.T, testSourceDir, tfVersion, endpoint, u
 }
 
 func (f *TerraformTestFixture) WriteFile(filename, contents string) {
-	err := ioutil.WriteFile(filepath.Join(f.Directory, filename), []byte(contents), 0644)
+	err := os.WriteFile(filepath.Join(f.Directory, filename), []byte(contents), 0644)
 	f.Require.NoErrorf(err, "expected to be able to write to file '%s'", filename)
 }
 

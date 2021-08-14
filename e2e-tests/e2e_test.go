@@ -8,6 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const TestUserName = "root@pam"
+const TestPassword = "proxmox"
+
 var testCases = []struct {
 	Name      string
 	TFVersion string
@@ -23,7 +26,7 @@ func TestMain(t *testing.T) {
 	// TODO: Get this from somewhere not hardcoded?
 	provider := "virtualbox"
 	// TODO: Better name choice
-	pve := <-fixtures.NewProxmoxTestFixture(t, provider, "http://localhost:8000", "Main suite from files")
+	pve := <-fixtures.NewProxmoxTestFixture(t, provider, "http://localhost:8000", "Main suite from files", TestUserName, TestPassword)
 
 	defer pve.TearDown()
 
@@ -49,7 +52,7 @@ func TestMain(t *testing.T) {
 
 		t.Run(testCase.Name, func(t *testing.T) {
 			// TODO: Take test cases from files
-			tf := fixtures.NewTerraformTestFixture(t, "cases/simple", testCase.TFVersion, pve.Endpoint, "root@pam", "proxmox")
+			tf := fixtures.NewTerraformTestFixture(t, "cases/simple", testCase.TFVersion, pve.Endpoint, TestUserName, TestPassword)
 			//expected := fixtures.LoadExpectedResults(t, tf.Directory)
 
 			// --- DO NOT change order of these defer statements
@@ -62,5 +65,15 @@ func TestMain(t *testing.T) {
 
 			// TODO: Evaluate results
 		})
+	}
+}
+
+func evaluateResults(t *testing.T, expected map[string]interface{}) {
+	for apiKey, apiVal := range expected {
+		for _, item := range apiVal.(map[string]interface{}) {
+
+			//for attrName, attrValue := range item.(map[string]interface{}) {
+			//}
+		}
 	}
 }
