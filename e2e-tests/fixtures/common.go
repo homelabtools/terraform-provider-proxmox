@@ -3,12 +3,16 @@ package fixtures
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"io"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"testing"
 
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
 )
 
 // Timestamp format that works with filenames Windows (has no colon)
@@ -61,4 +65,13 @@ func run(out io.Writer, name string, args ...string) error {
 		return errors.WithStack(err)
 	}
 	return nil
+}
+
+// LoadExpectedResults loads expected.json from the given test directory
+func LoadExpectedResults(t *testing.T, dir string) map[string]interface{} {
+	expectedResults, err := os.ReadFile(filepath.Join(dir, "expected.json"))
+	require.NoErrorf(t, err, "Failed to load expected test results")
+	expected := map[string]interface{}{}
+	require.NoError(t, json.Unmarshal(expectedResults, &expected))
+	return expected
 }

@@ -27,31 +27,40 @@ func TestMain(t *testing.T) {
 
 	defer pve.TearDown()
 
-	suiteSnapshotName := "StartOfSuite"
+	startSnapshotName := t.Name() + " Start"
 
 	// If there's an existing snapshot from a previous run, reuse it. This speeds up the debugging
 	// cycle, you can continually run `make debug-test` and not have to wait for the VM to be created.
-	hasSnapshot, err := pve.HasSnapshot(suiteSnapshotName)
+	hasSnapshot, err := pve.HasSnapshot(startSnapshotName)
 	require.NoErrorf(err, "could not determine if snapshot '%s' exists, try again and run `make clean` before running tests")
 	if hasSnapshot {
-		require.NoErrorf(pve.RestoreSnapshot(suiteSnapshotName), "unable to restore existing snapshot '%s'", suiteSnapshotName)
+		require.NoErrorf(pve.RestoreSnapshot(startSnapshotName), "unable to restore existing snapshot '%s'", startSnapshotName)
 	} else {
-		require.NoError(pve.SaveSnapshot(suiteSnapshotName), "unable to save snapshot at start of test suite")
+		require.NoError(pve.SaveSnapshot(startSnapshotName), "unable to save snapshot at start of test suite")
 	}
 
 	for _, testCase := range testCases {
 		// When the test is complete, save the current state (so that it can be inspected later) and
 		// revert back to the starting state in preparation for the next test case.
-		defer require.NoErrorf(pve.RestoreSnapshot(suiteSnapshotName), "unable to restore snapshot back to suite start at the end of test '%s'", testCase.Name)
+		// --- DO NOT change the order of these defer statements.
+		defer require.NoErrorf(pve.RestoreSnapshot(startSnapshotName), "unable to restore snapshot back to suite start at the end of test '%s'", testCase.Name)
 		defer require.NoErrorf(pve.SaveSnapshot(fmt.Sprintf("After test case '%s'", testCase.Name)), "unable to save snapshot at end of test '%s'", testCase.Name)
+		// ---
 
 		t.Run(testCase.Name, func(t *testing.T) {
 			// TODO: Take test cases from files
 			tf := fixtures.NewTerraformTestFixture(t, "cases/simple", testCase.TFVersion, pve.Endpoint, "root@pam", "proxmox")
-			// Save a snapshot before teardown for debugging purposes.
-			require.NoErrorf(pve.SaveSnapshot(fmt.Sprintf("Before Terraform destroy for test case '%s'", testCase.Name)), "unable to save snapshot at end of test '%s'", testCase.Name)
+			//expected := fixtures.LoadExpectedResults(t, tf.Directory)
+
+			// --- DO NOT change order of these defer statements
 			defer tf.TearDown()
+			// Save a snapshot before teardown for debugging purposes.
+			defer require.NoErrorf(pve.SaveSnapshot(fmt.Sprintf("Before Terraform destroy for test case '%s'", testCase.Name)), "unable to save snapshot at end of test '%s'", testCase.Name)
+			// ---
+
 			tf.Init().Apply()
+
+			// TODO: Evaluate results
 		})
 	}
 }
