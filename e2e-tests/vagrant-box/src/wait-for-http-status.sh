@@ -1,5 +1,5 @@
 #!/bin/sh
-set -eu
+set -u
 URL="${1?Must provide URL as 1st argument}"
 STATUS="${2?Must provide HTTP status code as 2nd argument}"
 DELAY=1
