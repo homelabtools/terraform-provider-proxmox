@@ -6,6 +6,8 @@ HOSTNAME="${HOSTNAME:-proxmox-e2etests}"
 FQDN="${FQDN:-$HOSTNAME.internal}"
 IFACE="${IFACE:-eth0}"
 
+PACKAGES=(apt-transport-https debian-archive-keyring debian-keyring gnupg2 mitmproxy)
+
 main() {
     # Proxmox expects the hostname/FQDN to map to the IP that it's listening on.
     ip="$(hostname -I)"
@@ -16,7 +18,7 @@ HERE
 
     hostnamectl set-hostname "$FQDN" --static
 
-    apt install -y gnupg2 debian-keyring debian-archive-keyring apt-transport-https
+    apt install -y "${PACKAGES[@]}"
 
     # Fetch Proxmox key
     wget -qO - "$PROXMOX_MIRROR/proxmox-ve-release-6.x.gpg" | apt-key add -

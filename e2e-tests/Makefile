@@ -2,6 +2,7 @@ PROVIDER ?= virtualbox
 BOX_DIR  := vagrant-box
 TESTBED  := testbed
 
+
 default: test
 
 vagrant-box:
@@ -17,7 +18,7 @@ destroy:
 	time vagrant destroy -f
 
 test:
-	go test -v .
+	HTTP_PROXY=http://127.0.0.1:58080 HTTPS_PROXY=http://127.0.0.1:58080 go test -v .
 
 # Same as test but skip the cleanup for debugging purposes
 test-debug: SKIP_CLEANUP = 1

@@ -1,8 +1,10 @@
 package fixtures
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -28,6 +30,7 @@ type ProxmoxTestFixture struct {
 	httpClient   *http.Client
 	testUsername string
 	testPassword string
+	ticket       string
 }
 
 // NewProxmoxTestFixture creates a new Vagrant-based test fixture for working with Proxmox.
@@ -70,15 +73,43 @@ func (f *ProxmoxTestFixture) TearDown() {
 	f.Assert.NoErrorf(err, "failed shutting down VM for fixture '%s'", f.Name)
 }
 
+func (f *ProxmoxTestFixture) initTicket() {
+	if f.ticket != "" {
+		return
+	}
+	reqBody := fmt.Sprintf("username=%s&password=%s", f.testUsername, f.testPassword)
+	ticketURL, err := url.Parse(f.Endpoint + "/access/ticket")
+	f.Require.NoError(err, "Failed trying to parse ticket URL")
+	resp, err := f.httpClient.Do(&http.Request{
+		Method: "GET",
+		URL:    ticketURL,
+		Body:   io.NopCloser(bytes.NewBuffer([]byte(reqBody))),
+	})
+	f.Require.NoError(err, "Failed trying to get ticket")
+	respBody, err := io.ReadAll(resp.Body)
+	f.Require.NoError(err, "Failed trying to read ticket response")
+
+	// Quick anonymous struct for exracting auth ticket
+	respStruct := struct {
+		Data struct {
+			Ticket string `json:"ticket"`
+		} `json:"data"`
+	}{}
+	err = json.Unmarshal(respBody, &respStruct)
+	f.Require.NoError(err, "Failed trying to unmarshal ticket response")
+	f.ticket = respStruct.Data.Ticket
+}
+
 func (f *ProxmoxTestFixture) APIGet(apiName string) map[string]interface{} {
+	f.initTicket()
 	params := fmt.Sprintf("?username=%s&password=%s", f.testUsername, f.testPassword)
 	url, err := url.Parse(f.Endpoint + "/" + apiName + params)
-	f.Require.NoErrorf(err, "Invalid API name, should be in the form of e.g. 'access/roles'")
+	f.Require.NoErrorf(err, "Invalid API name, should be in the form of e.g. access/roles")
 	resp, err := f.httpClient.Do(&http.Request{
 		Method: "GET",
 		URL:    url,
+		Header: http.Header{"PVEAuthCookie": []string{f.ticket}},
 	})
-	// TODO: JSON path for ticket is data.ticket
 	f.Require.NoErrorf(err, "Unexpected error when performing HTTP GET on '%s'", url.String())
 	jsonBody, err := ioutil.ReadAll(resp.Body)
 	f.Require.NoErrorf(err, "Unexpected error when reading response from '%s'", url.String())

@@ -1,18 +1,26 @@
 package fixtures
 
 import (
+	"os"
 	"strings"
 
 	"github.com/pkg/errors"
 )
 
+const DisableSnapshotsEnvVar = "DISABLE_SNAPSHOTS"
+
 type VagrantTestFixture struct {
 	Provider string
+	// Optionally disable snapshots. This logic is handled here so that
+	// callers can keep test code concise and do not need to wrap every
+	// snapshot operation in an IF statement.
+	disableSnapshots bool
 }
 
 func NewVagrantTestFixture(provider string) VagrantTestFixture {
 	return VagrantTestFixture{
-		Provider: provider,
+		Provider:         provider,
+		disableSnapshots: os.Getenv(DisableSnapshotsEnvVar) != "",
 	}
 }
 
@@ -27,6 +35,9 @@ func (f *VagrantTestFixture) Halt() error {
 }
 
 func (f *VagrantTestFixture) HasSnapshot(name string) (bool, error) {
+	if f.disableSnapshots {
+		return false, nil
+	}
 	snapshots, err := f.ListSnapshots()
 	if err != nil {
 		return false, errors.WithStack(err)
@@ -40,6 +51,9 @@ func (f *VagrantTestFixture) HasSnapshot(name string) (bool, error) {
 }
 
 func (f *VagrantTestFixture) ListSnapshots() ([]string, error) {
+	if f.disableSnapshots {
+		return []string{}, nil
+	}
 	lines, err := runCaptureLines("vagrant", "--machine-readable", "snapshot", "list")
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -69,11 +83,17 @@ func (f *VagrantTestFixture) ListSnapshots() ([]string, error) {
 }
 
 func (f *VagrantTestFixture) RestoreSnapshot(name string) error {
+	if f.disableSnapshots {
+		return nil
+	}
 	err := runStdout("vagrant", "snapshot", "restore", name)
 	return errors.WithStack(err)
 }
 
 func (f *VagrantTestFixture) SaveSnapshot(name string) error {
+	if f.disableSnapshots {
+		return nil
+	}
 	err := runStdout("vagrant", "snapshot", "save", name)
 	return errors.WithStack(err)
 }

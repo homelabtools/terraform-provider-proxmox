@@ -3,15 +3,27 @@ Vagrant.require_version ">= 2.2.16"
 Vagrant.configure("2") do |config|
   config.vm.box = "proxmox"
   config.vm.provider "virtualbox" do |v|
+    v.customize ["modifyvm", :id, "--nictype1", "virtio" ]
     v.memory = 4096  # Required for Proxmox to run properly
     v.cpus = 2
   end
-  host_port = ENV["HOST_PORT"] || 8006
-  config.vm.network "forwarded_port", guest: 8006, host: host_port
-  config.vm.network "forwarded_port", guest: 80, host: 8000
+  # TODO: Use bridged network
+  # TODO: Use port auto increment, how to get into var after assigned?
+  proxmox_port_host = 58000
+  mitmweb_port_host = 59081
+  proxy_port_host = 58080
+  config.vm.network "forwarded_port", guest: 80, host: proxmox_port_host, id: "proxmox"
+  config.vm.network "forwarded_port", guest: 8081, host: mitmweb_port_host, id: "mitmweb"
+  config.vm.network "forwarded_port", guest: 8080, host: proxy_port_host, id: "caddy-proxy"
+
+
+  # TODO: replace with Ruby
   # Wait for Proxmox to come up
-  proxmox_url = "https://127.0.0.1:#{host_port}"
-	config.vm.provision "shell",
-    inline: "wait-for-http-status #{proxmox_url} 200 || (echo 'Proxmox failed to come up at #{proxmox_url}, something is broken in the provisioning process'; exit 1)"
-	config.vm.provision "shell", inline: "echo Proxmox web UI located at #{proxmox_url}"
+	#config.vm.provision "shell",
+  #  inline: "wait-for-http-status http://127.0.0.1 200 || (echo 'Proxmox failed to come up at http://127.0.0.1, something is broken in the provisioning process'; exit 1)"
+	config.vm.provision "shell", inline: "echo Proxmox web UI located at http://127.0.0.1:#{proxmox_port_host}"
+
+  # Start mitmweb (8081) so that it can be reached from the host machine
+	config.vm.provision "shell", inline: "mitmweb --listen-host 0.0.0.0 --web-iface 0.0.0.0 2>&1 > /var/log/mitmweb & disown"
+	config.vm.provision "shell", inline: "echo mitmproxy web UI located at http://127.0.0.1:#{mitmweb_port_host}"
 end

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/danitso/terraform-provider-proxmox/e2e-tests/fixtures"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,7 +27,10 @@ func TestMain(t *testing.T) {
 	// TODO: Get this from somewhere not hardcoded?
 	provider := "virtualbox"
 	// TODO: Better name choice
-	pve := <-fixtures.NewProxmoxTestFixture(t, provider, "http://localhost:8000", "Main suite from files", TestUserName, TestPassword)
+	// NOTE: the endpoint here is just 127.0.0.1:80, which is the port *inside* the guest machine.
+	// This is because traffic will go through mitmproxy inside the VM, which will then pass it along
+	// to that endpoint internally within the VM.
+	pve := <-fixtures.NewProxmoxTestFixture(t, provider, "http://127.0.0.1", "Main suite from files", TestUserName, TestPassword)
 
 	defer pve.TearDown()
 
@@ -42,6 +46,7 @@ func TestMain(t *testing.T) {
 		require.NoError(pve.SaveSnapshot(startSnapshotName), "unable to save snapshot at start of test suite")
 	}
 
+	// TODO: investigate double snapshot restore of snapshot with name of startSnapshotName
 	for _, testCase := range testCases {
 		// When the test is complete, save the current state (so that it can be inspected later) and
 		// revert back to the starting state in preparation for the next test case.
@@ -53,7 +58,7 @@ func TestMain(t *testing.T) {
 		t.Run(testCase.Name, func(t *testing.T) {
 			// TODO: Take test cases from files
 			tf := fixtures.NewTerraformTestFixture(t, "cases/simple", testCase.TFVersion, pve.Endpoint, TestUserName, TestPassword)
-			//expected := fixtures.LoadExpectedResults(t, tf.Directory)
+			expected := fixtures.LoadExpectedResults(t, tf.Directory)
 
 			// --- DO NOT change order of these defer statements
 			defer tf.TearDown()
@@ -63,17 +68,14 @@ func TestMain(t *testing.T) {
 
 			tf.Init().Apply()
 
-			// TODO: Evaluate results
+			evaluateResults(t, pve, expected)
 		})
 	}
 }
 
-func evaluateResults(t *testing.T, expected map[string]interface{}) {
+func evaluateResults(t *testing.T, f *fixtures.ProxmoxTestFixture, expected map[string]interface{}) {
 	for apiKey, apiVal := range expected {
-		for _, item := range apiVal.(map[string]interface{}) {
-
-			//for attrName, attrValue := range item.(map[string]interface{}) {
-			//}
-		}
+		data := f.APIGet(apiKey)["data"].([]interface{})
+		assert.Subsetf(t, data, apiVal, "API result does not match expected test data for items under '%s'")
 	}
 }

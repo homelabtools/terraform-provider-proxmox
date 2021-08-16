@@ -13,6 +13,7 @@ $(BOX_PATH): $(BOX_SRC)
 	vagrant plugin install --local
 	vagrant destroy -f || true
 	time vagrant up --provider=$(PROVIDER)
+	rm -f $(BOX_PATH)
 	time vagrant package --output $(BOX_PATH)
 	time vagrant box add $(BOX_PATH) --name $(BOX_NAME) --force
 	# Clean up VM

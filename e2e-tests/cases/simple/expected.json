@@ -1,7 +1,7 @@
 {
   "access/roles": [
     {
-      "special": "0",
+      "special": 0,
       "privs": "VM.Monitor",
       "roleid": "test-role"
     }
