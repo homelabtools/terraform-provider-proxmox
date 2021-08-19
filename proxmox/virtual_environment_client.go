@@ -20,12 +20,12 @@ import (
 	"github.com/google/go-querystring/query"
 )
 
-// This only gets set during build time when using -ldflags.
+// This only gets set during build time when using -ldflags, or by test code.
 // It should only be set when building for tests. It also must be of type string.
 var disableHTTPSCheck string
 
 // NewVirtualEnvironmentClient creates and initializes a VirtualEnvironmentClient instance.
-func NewVirtualEnvironmentClient(endpoint, username, password, otp string, insecure bool) (*VirtualEnvironmentClient, error) {
+func NewVirtualEnvironmentClient(endpoint, username, password, otp string, insecure bool, proxyFunc func(*http.Request) (*url.URL, error)) (*VirtualEnvironmentClient, error) {
 	u, err := url.ParseRequestURI(endpoint)
 
 	if err != nil {
@@ -50,15 +50,16 @@ func NewVirtualEnvironmentClient(endpoint, username, password, otp string, insec
 		pOTP = &otp
 	}
 
+	if proxyFunc == nil {
+		proxyFunc = http.ProxyFromEnvironment
+	}
+
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: insecure,
 			},
-			//Proxy: http.ProxyFromEnvironment,
-			Proxy: func(r *http.Request) (*url.URL, error) {
-				return url.Parse("http://127.0.0.1:58080")
-			},
+			Proxy: proxyFunc,
 		},
 	}
 

@@ -1,17 +1,14 @@
 package fixtures
 
 import (
-	"bytes"
-	"crypto/tls"
-	"encoding/json"
-	"fmt"
-	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"testing"
 	"time"
+
+	"github.com/danitso/terraform-provider-proxmox/proxmox"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -27,38 +24,40 @@ type ProxmoxTestFixture struct {
 	// Name is a descriptive name for this test fixture.
 	Name string
 	// URL of Proxmox instance
-	Endpoint            string
-	httpClient          *http.Client
-	testUsername        string
-	testPassword        string
-	ticket              string
-	csrfPreventionToken string
+	Endpoint  string
+	PVEClient *proxmox.VirtualEnvironmentClient
 }
 
 // NewProxmoxTestFixture creates a new Vagrant-based test fixture for working with Proxmox.
 // Calling this function will asynchronously bring up a VM for running Proxmox.
-func NewProxmoxTestFixture(t *testing.T, vagrantProvider, proxmoxEndpoint, name, testUsername, testPassword string) chan *ProxmoxTestFixture {
+func NewProxmoxTestFixture(t *testing.T, vagrantProvider, endpoint, httpProxy, name, username, password string) chan *ProxmoxTestFixture {
 	base := NewBaseFixture(t)
 	c := make(chan *ProxmoxTestFixture, 1)
+	pveClient, err := proxmox.NewVirtualEnvironmentClient(endpoint,
+		username,
+		password,
+		"",
+		true,
+		func(r *http.Request) (*url.URL, error) {
+			// A custom proxy function is used here, even though the proxy is usually coming from
+			// an env var, because the regular http.ProxyFromEnvironment will return nil for no proxy
+			// if the HTTP request address is localhost or 127.0.0.1. For testing the Proxmox endpoint
+			// is usually on localhost, so http.ProxyFromEnvironment will not work.
+			if httpProxy == "" {
+				return nil, nil
+			}
+			return url.Parse(httpProxy)
+		},
+	)
+	require.NoError(t, err)
 	func() {
 		f := &ProxmoxTestFixture{
 			BaseFixture:        base,
 			VagrantTestFixture: NewVagrantTestFixture(vagrantProvider),
 			VagrantProvider:    vagrantProvider,
 			Name:               name,
-			Endpoint:           proxmoxEndpoint,
-			httpClient: &http.Client{
-				Transport: &http.Transport{
-					TLSClientConfig: &tls.Config{
-						InsecureSkipVerify: true,
-					},
-					Proxy: func(r *http.Request) (*url.URL, error) {
-						return url.Parse("http://127.0.0.1:58080")
-					},
-				},
-			},
-			testUsername: testUsername,
-			testPassword: testPassword,
+			Endpoint:           endpoint,
+			PVEClient:          pveClient,
 		}
 		f.start()
 		c <- f
@@ -82,64 +81,4 @@ func (f *ProxmoxTestFixture) TearDown() {
 	// Turn off the VM.
 	err := f.Halt()
 	f.Assert.NoErrorf(err, "failed shutting down VM for fixture '%s'", f.Name)
-}
-
-func (f *ProxmoxTestFixture) urlForAPI(apiPath string) *url.URL {
-	result, err := url.Parse(fmt.Sprintf("%s/api2/json/%s", f.Endpoint, apiPath))
-	f.Require.NoErrorf(err, "Failed trying to parse API URL '%s'", apiPath)
-	return result
-}
-
-func (f *ProxmoxTestFixture) initTicket() {
-	if f.ticket != "" {
-		return
-	}
-	reqBody := fmt.Sprintf("username=%s&password=%s", f.testUsername, f.testPassword)
-	// TODO: Put into APIPost
-	resp, err := f.httpClient.Do(&http.Request{
-		Method:        "POST",
-		URL:           f.urlForAPI("access/ticket"),
-		Body:          io.NopCloser(bytes.NewBuffer([]byte(reqBody))),
-		ContentLength: int64(len(reqBody)),
-		Header: http.Header{
-			"Content-Type": []string{"application/x-www-form-urlencoded"},
-		},
-		TransferEncoding: []string{},
-	})
-	f.Require.NoError(err, "Failed trying to get ticket")
-	f.Require.Equal(http.StatusOK, resp.StatusCode, "expected HTTP 200 from access/ticket")
-
-	respBody, err := io.ReadAll(resp.Body)
-	f.Require.NoError(err, "Failed trying to read ticket response")
-	f.T.Log("Response body of GET /access/ticket")
-	f.T.Log(string(respBody))
-
-	// Quick anonymous struct for exracting auth ticket
-	respStruct := struct {
-		Data struct {
-			Ticket              string `json:"ticket"`
-			CSRFPreventionToken string `json:"Csrfpreventiontoken"`
-		} `json:"data"`
-	}{}
-	err = json.Unmarshal(respBody, &respStruct)
-	f.Require.NoError(err, "Failed trying to unmarshal ticket response")
-	f.ticket = respStruct.Data.Ticket
-	f.csrfPreventionToken = respStruct.Data.CSRFPreventionToken
-}
-
-func (f *ProxmoxTestFixture) APIGet(apiName string) map[string]interface{} {
-	f.initTicket()
-	url := f.urlForAPI(apiName)
-	resp, err := f.httpClient.Do(&http.Request{
-		Method: "GET",
-		URL:    url,
-		Header: http.Header{"Cookie": []string{"PVEAuthCookie=" + f.ticket}},
-	})
-	f.Require.NoErrorf(err, "Unexpected error when performing HTTP GET on '%s'", url.String())
-	jsonBody, err := ioutil.ReadAll(resp.Body)
-	f.Require.NoErrorf(err, "Unexpected error when reading response from '%s'", url.String())
-	var jsonObj map[string]interface{}
-	err = json.Unmarshal(jsonBody, &jsonObj)
-	f.Require.NoErrorf(err, "Unexpected error when unmarshaling JSON from '%s'", url.String())
-	return jsonObj
 }

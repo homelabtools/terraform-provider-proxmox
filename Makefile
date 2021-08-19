@@ -32,8 +32,8 @@ default: build
 build:
 	mkdir -p "$(TERRAFORM_PLUGIN_DIRECTORY)"
 	rm -f "$(TERRAFORM_PLUGIN_EXECUTABLE)"
+	// TODO: this is only for test code
 	go build -ldflags="-s -w -X $(MODULE)/proxmox.disableHTTPSCheck=true" -o "$(TERRAFORM_PLUGIN_EXECUTABLE)"
-	# TODO: better
 	mkdir -p ~/.terraform.d/plugins/registry.terraform.io/danitso/proxmox/$(VERSION)/$(TERRAFORM_PLATFORM)
 	cp -f "$(TERRAFORM_PLUGIN_EXECUTABLE)" ~/.terraform.d/plugins/registry.terraform.io/danitso/proxmox/$(VERSION)/$(TERRAFORM_PLATFORM)/$(NAME)_v$(VERSION)_x4$(TERRAFORM_PLUGIN_EXTENSION)
 
