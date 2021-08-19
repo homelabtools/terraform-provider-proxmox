@@ -30,7 +30,7 @@ func TestMain(t *testing.T) {
 	// NOTE: the endpoint here is just 127.0.0.1:80, which is the port *inside* the guest machine.
 	// This is because traffic will go through mitmproxy inside the VM, which will then pass it along
 	// to that endpoint internally within the VM.
-	pve := <-fixtures.NewProxmoxTestFixture(t, provider, "http://127.0.0.1", "Main suite from files", TestUserName, TestPassword)
+	pve := <-fixtures.NewProxmoxTestFixture(t, provider, "http://127.0.0.1:80", "Main suite from files", TestUserName, TestPassword)
 
 	defer pve.TearDown()
 
@@ -59,6 +59,7 @@ func TestMain(t *testing.T) {
 			// TODO: Take test cases from files
 			tf := fixtures.NewTerraformTestFixture(t, "cases/simple", testCase.TFVersion, pve.Endpoint, TestUserName, TestPassword)
 			expected := fixtures.LoadExpectedResults(t, tf.Directory)
+			t.Log(expected)
 
 			// --- DO NOT change order of these defer statements
 			defer tf.TearDown()

@@ -3,18 +3,16 @@ Vagrant.require_version ">= 2.2.16"
 Vagrant.configure("2") do |config|
   config.vm.box = "proxmox"
   config.vm.provider "virtualbox" do |v|
-    v.customize ["modifyvm", :id, "--nictype1", "virtio" ]
     v.memory = 4096  # Required for Proxmox to run properly
     v.cpus = 2
   end
-  # TODO: Use bridged network
   # TODO: Use port auto increment, how to get into var after assigned?
   proxmox_port_host = 58000
-  mitmweb_port_host = 59081
+  mitmweb_port_host = 58081
   proxy_port_host = 58080
   config.vm.network "forwarded_port", guest: 80, host: proxmox_port_host, id: "proxmox"
   config.vm.network "forwarded_port", guest: 8081, host: mitmweb_port_host, id: "mitmweb"
-  config.vm.network "forwarded_port", guest: 8080, host: proxy_port_host, id: "caddy-proxy"
+  config.vm.network "forwarded_port", guest: 8080, host: proxy_port_host, id: "mitmproxy"
 
 
   # TODO: replace with Ruby
@@ -26,4 +24,5 @@ Vagrant.configure("2") do |config|
   # Start mitmweb (8081) so that it can be reached from the host machine
 	config.vm.provision "shell", inline: "mitmweb --listen-host 0.0.0.0 --web-iface 0.0.0.0 2>&1 > /var/log/mitmweb & disown"
 	config.vm.provision "shell", inline: "echo mitmproxy web UI located at http://127.0.0.1:#{mitmweb_port_host}"
+	config.vm.provision "shell", inline: "sleep 10"
 end

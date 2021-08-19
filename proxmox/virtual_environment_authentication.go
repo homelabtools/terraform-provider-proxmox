@@ -7,7 +7,6 @@ package proxmox
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -44,7 +43,7 @@ func (c *VirtualEnvironmentClient) Authenticate(reset bool) error {
 	req, err := http.NewRequest(hmPOST, fmt.Sprintf("%s/%s/access/ticket", c.Endpoint, basePathJSONAPI), reqBody)
 
 	if err != nil {
-		return errors.New("Failed to create authentication request")
+		return fmt.Errorf("Failed to create authentication request: %s", err.Error())
 	}
 
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -52,7 +51,7 @@ func (c *VirtualEnvironmentClient) Authenticate(reset bool) error {
 	res, err := c.httpClient.Do(req)
 
 	if err != nil {
-		return errors.New("Failed to retrieve authentication response")
+		return fmt.Errorf("Failed to retrieve authentication response: %s", err.Error())
 	}
 
 	err = c.ValidateResponseCode(res)
@@ -65,23 +64,23 @@ func (c *VirtualEnvironmentClient) Authenticate(reset bool) error {
 	err = json.NewDecoder(res.Body).Decode(&resBody)
 
 	if err != nil {
-		return errors.New("Failed to decode authentication response")
+		return fmt.Errorf("Failed to decode authentication response: %s", err.Error())
 	}
 
 	if resBody.Data == nil {
-		return errors.New("The server did not include a data object in the authentication response")
+		return fmt.Errorf("The server did not include a data object in the authentication response: %s", err.Error())
 	}
 
 	if resBody.Data.CSRFPreventionToken == nil {
-		return errors.New("The server did not include a CSRF prevention token in the authentication response")
+		return fmt.Errorf("The server did not include a CSRF prevention token in the authentication response: %s", err.Error())
 	}
 
 	if resBody.Data.Ticket == nil {
-		return errors.New("The server did not include a ticket in the authentication response")
+		return fmt.Errorf("The server did not include a ticket in the authentication response: %s", err.Error())
 	}
 
 	if resBody.Data.Username == "" {
-		return errors.New("The server did not include the username in the authentication response")
+		return fmt.Errorf("The server did not include the username in the authentication response: %s", err.Error())
 	}
 
 	c.authenticationData = resBody.Data

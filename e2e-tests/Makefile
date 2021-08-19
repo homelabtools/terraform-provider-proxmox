@@ -18,6 +18,7 @@ destroy:
 	time vagrant destroy -f
 
 test:
+	# TODO: pass these into TF process in fixture
 	HTTP_PROXY=http://127.0.0.1:58080 HTTPS_PROXY=http://127.0.0.1:58080 go test -v .
 
 # Same as test but skip the cleanup for debugging purposes
