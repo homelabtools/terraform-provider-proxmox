@@ -25,6 +25,9 @@ down:
 destroy:
 	time vagrant destroy -f
 
+B:
+	echo $(ABC)
+
 test:
 	go test -ldflags $(LDFLAGS) -v .
 

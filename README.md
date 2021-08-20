@@ -43,6 +43,17 @@ $ make test
 
 Tests are limited to regression tests, ensuring backwards compability.
 
+### End-to-End Tests
+
+There is a suite of end-to-end tests under `e2e-tests/`. This test suite runs real Terraform against a real Proxmox instance, which runs within a VM using Vagrant.
+
+They can be run as follows:
+```sh
+$ make e2e-test
+```
+
+For details, see the documentation in [e2e-tests](e2e-tests/README.md).
+
 ## Known issues
 
 ### Disk images cannot be imported by non-PAM accounts
