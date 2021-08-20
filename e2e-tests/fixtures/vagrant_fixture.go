@@ -1,6 +1,7 @@
 package fixtures
 
 import (
+	"log"
 	"os"
 	"strings"
 
@@ -86,7 +87,11 @@ func (f *VagrantTestFixture) RestoreSnapshot(name string) error {
 	if f.disableSnapshots {
 		return nil
 	}
+	log.Printf("Attempting to restore snapshot '%s'...", name)
 	err := runStdout("vagrant", "snapshot", "restore", name)
+	if err != nil {
+		log.Printf("Failed restoring snapshot '%s': %s\n", name, err.Error())
+	}
 	return errors.WithStack(err)
 }
 
@@ -94,6 +99,10 @@ func (f *VagrantTestFixture) SaveSnapshot(name string) error {
 	if f.disableSnapshots {
 		return nil
 	}
+	log.Printf("Attempting to save snapshot '%s'...", name)
 	err := runStdout("vagrant", "snapshot", "save", name)
+	if err != nil {
+		log.Printf("Failed saving snapshot '%s': %s\n", name, err.Error())
+	}
 	return errors.WithStack(err)
 }

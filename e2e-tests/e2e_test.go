@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/danitso/terraform-provider-proxmox/e2e-tests/fixtures"
 	"github.com/stretchr/testify/assert"
@@ -52,58 +53,79 @@ func TestMain(t *testing.T) {
 
 	defer pve.TearDown()
 
-	startSnapshotName := t.Name() + " Start"
+	baseStateSnapshotName := t.Name() + " Base"
 
 	// If there's an existing snapshot from a previous run, reuse it. This speeds up the debugging
 	// cycle, you can continually run `make debug-test` and not have to wait for the VM to be created.
-	hasSnapshot, err := pve.HasSnapshot(startSnapshotName)
+	hasSnapshot, err := pve.HasSnapshot(baseStateSnapshotName)
 	require.NoErrorf(err, "could not determine if snapshot '%s' exists, try again and run `make clean` before running tests")
 	if hasSnapshot {
-		require.NoErrorf(pve.RestoreSnapshot(startSnapshotName), "unable to restore existing snapshot '%s'", startSnapshotName)
+		require.NoErrorf(pve.RestoreSnapshot(baseStateSnapshotName), "unable to restore existing snapshot '%s'", baseStateSnapshotName)
 	} else {
-		require.NoError(pve.SaveSnapshot(startSnapshotName), "unable to save snapshot at start of test suite")
+		require.NoError(pve.SaveSnapshot(baseStateSnapshotName), "unable to save snapshot at start of test suite")
 	}
 
-	// TODO: investigate double snapshot restore of snapshot with name of startSnapshotName
+	// Give a unique name to each test run so that future runs do not collide with it
+	beforeScenarioSnapshotName := fmt.Sprintf("Start of %s at %s", t.Name(), timestamp())
+	require.NoError(pve.SaveSnapshot(beforeScenarioSnapshotName), "unable to save snapshot at start of test suite")
+
 	for _, scenario := range testScenarios {
-		log.Printf("Now testing using Terraform version '%s'\n", scenario.TFVersion)
+		// Wrap with a function so that defer statements below are scoped to each iteration of the loop
+		func() {
+			log.Printf("Now testing using Terraform version '%s'\n", scenario.TFVersion)
 
-		// When the test is complete, save the current state (so that it can be inspected later) and
-		// revert back to the starting state in preparation for the next test case.
+			startOfScenarioSnapshotName := fmt.Sprintf("Start of %s %s %s", t.Name(), scenario.Name, timestamp())
+			require.NoError(pve.SaveSnapshot(startOfScenarioSnapshotName), "unable to save snapshot at start of scenario '%s'", startOfScenarioSnapshotName)
 
-		// --- DO NOT change order of these defer statements ---
-		defer require.NoErrorf(pve.RestoreSnapshot(startSnapshotName), "unable to restore snapshot back to suite start at the end of test '%s'", scenario.Name)
-		defer require.NoErrorf(pve.SaveSnapshot(fmt.Sprintf("After test case '%s'", scenario.Name)), "unable to save snapshot at end of test '%s'", scenario.Name)
-		// -----------------------------------------------------
+			// When the test is complete, save the current state (so that it can be inspected later) and
+			// revert back to the starting state in preparation for the next test case.
+			// --- DO NOT change order of these defer statements ---
+			defer require.NoErrorf(pve.RestoreSnapshot(beforeScenarioSnapshotName), "unable to restore snapshot back to suite start at the end of scenario '%s'", scenario.Name)
+			// TODO: This is more useful when snapshotting is disabled on individual test cases, which provides some more
+			//       potential test coverage by way of not starting from a fresh state.
+			defer require.NoErrorf(pve.SaveSnapshot(fmt.Sprintf("After test scenario '%s' %s", scenario.Name, timestamp())), "unable to save snapshot at end of scenario '%s'", scenario.Name)
+			// -----------------------------------------------------
 
-		dirs, err := os.ReadDir(TestCasesPath)
-		require.NoErrorf(err, "could not open test cases from directory '%s'", TestCasesPath)
-		for _, dir := range dirs {
-			// TODO: Use an abstraction like AeroFS
-			testCasePath := filepath.Join(TestCasesPath, dir.Name())
-			fullTestName := fmt.Sprintf("%s_%s", scenario.Name, testCasePath)
+			dirs, err := os.ReadDir(TestCasesPath)
+			require.NoErrorf(err, "could not open test cases from directory '%s'", TestCasesPath)
+			for _, dir := range dirs {
+				// TODO: Use an abstraction like AeroFS
+				testCasePath := filepath.Join(TestCasesPath, dir.Name())
+				fullTestName := fmt.Sprintf("%s_%s", scenario.Name, testCasePath)
 
-			t.Run(fullTestName, func(t *testing.T) {
-				tf := fixtures.NewTerraformTestFixture(t, testCasePath, scenario.TFVersion, pve.Endpoint, TestUserName, TestPassword)
-				expected := fixtures.LoadExpectedResults(t, tf.Directory)
-				t.Log(expected)
+				// Individual test cases start being run here
+				t.Run(fullTestName, func(t *testing.T) {
+					tf := fixtures.NewTerraformTestFixture(t, testCasePath, scenario.TFVersion, pve.Endpoint, TestUserName, TestPassword)
+					expected := fixtures.LoadExpectedResults(t, tf.Directory)
+					t.Log(expected)
 
-				// --- DO NOT change order of these defer statements ---
-				defer tf.TearDown()
-				// Save a snapshot before teardown for debugging purposes.
-				defer require.NoErrorf(pve.SaveSnapshot(fmt.Sprintf("Before Terraform destroy for test case '%s'", scenario.Name)), "unable to save snapshot at end of test '%s'", scenario.Name)
-				// -----------------------------------------------------
+					// --- DO NOT change order of these defer statements ---
+					// TODO: move to end of range dirs, after t.Run() func? May be OK if testing recovers
+					//       from any panic within this function (it should, but verify)
+					defer require.NoErrorf(pve.RestoreSnapshot(startOfScenarioSnapshotName), "unable to restore snapshot back to start of scenario '%s'", scenario.Name)
+					defer tf.TearDown()
+					// Save a snapshot before teardown, for debugging purposes.
+					defer require.NoErrorf(
+						pve.SaveSnapshot(
+							fmt.Sprintf("Before Terraform destroy for test case '%s' %s", fullTestName, timestamp())),
+						"unable to save snapshot at end of test '%s'", scenario.Name)
+					// -----------------------------------------------------
 
-				tf.Init().Apply()
+					tf.Init().Apply()
 
-				for apiKey, apiVal := range expected {
-					var resp map[string]interface{}
-					err := pve.PVEClient.DoRequest(http.MethodGet, apiKey, nil, &resp)
-					assert.NoErrorf(t, err, "Unexpected error when calling API '%s'", apiKey)
-					data := resp["data"].([]interface{})
-					assert.Subsetf(t, data, apiVal, "API result does not match expected test data for items under '%s'")
-				}
-			})
-		}
+					for apiKey, apiVal := range expected {
+						var resp map[string]interface{}
+						err := pve.PVEClient.DoRequest(http.MethodGet, apiKey, nil, &resp)
+						assert.NoErrorf(t, err, "Unexpected error when calling API '%s'", apiKey)
+						data := resp["data"].([]interface{})
+						assert.Subsetf(t, data, apiVal, "API result does not match expected test data for items under '%s'")
+					}
+				})
+			}
+		}()
 	}
+}
+
+func timestamp() string {
+	return time.Now().Format(time.Stamp)
 }

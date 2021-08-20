@@ -1,7 +1,9 @@
 ## Prerequisites
 
 * Vagrant
-* VirtualBox (or VMware or libvirt, with modifications)
+* VirtualBox (or another provider like VMware or libvirt, but the Vagrantfile will need modifications)
+
+
 
 ## Possible Errors You May See
 
